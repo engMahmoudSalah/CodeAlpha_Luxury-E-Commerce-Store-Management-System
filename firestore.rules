@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Authenticated check
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Document owner check
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function: Super Admin check (Exact root email or custom claim)
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == 'mahmodsalah.2026@gmail.com' ||
+         request.auth.token.role == 'super_admin');
+    }
+    
+    // Helper function: Admin check (Super Admin or Store Admin with verified role in user doc)
+    function isAdmin() {
+      return isAuthenticated() && 
+        (isSuperAdmin() || 
+         request.auth.token.admin == true || 
+         request.auth.token.role == 'admin' ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')));
+    }
+
+    // Users Collection: Users cannot elevate their own roles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'permissions', 'isAdmin']))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Products Catalog: Public read, Admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Categories Catalog: Public read, Admin write
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Collections: Public read, Admin write
+    match /collections/{collectionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders: Customer can read/create their own orders, Admins manage all orders
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.customerId == request.auth.uid);
+      allow create: if true;
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Reviews: Public read, Authenticated create, Admin moderation
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Coupons: Public read, Admin management
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Store Settings: Public read, Super Admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Inventory Logs: Admin only
+    match /inventory_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Abandoned Carts: Admin only
+    match /abandoned_carts/{cartId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Return Requests: Customer and Admin
+    match /return_requests/{requestId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.customerId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Audit Logs: Immutable security logs
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Fallback rule for unspecified collections
+    match /{document=**} {
+      allow read, write: if isSuperAdmin();
+    }
+  }
+}

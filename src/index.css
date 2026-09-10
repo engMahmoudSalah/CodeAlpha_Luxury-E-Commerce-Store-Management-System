@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-primary: #FAF8F3;
+    --color-bg-surface: #FFFFFF;
+    --color-bg-surface-secondary: #F3EFE6;
+    --color-bg-dark: #141414;
+    --color-text-primary: #181818;
+    --color-text-muted: #5A5852;
+    --color-text-subtle: #8C887F;
+    --color-border: #E8E3D8;
+    --color-border-light: #F0ECE4;
+    --color-border-dark: #262626;
+    --color-thmanyah-star: #FFC700;
+    --color-thmanyah-green: #00875A;
+    --color-thmanyah-peach: #FDE2D2;
+  }
+
+  html {
+    font-family: 'IBM Plex Sans Arabic', 'Readex Pro', 'Alexandria', 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #FAF8F3;
+    color: #181818;
+    direction: rtl;
+    text-align: right;
+  }
+
+  body {
+    margin: 0;
+    background-color: #FAF8F3;
+    color: #181818;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Hide scrollbar globally while maintaining scrolling functionality */
+  html, body, * {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}
+
+.font-arabic {
+  font-family: 'IBM Plex Sans Arabic', 'Readex Pro', 'Alexandria', sans-serif;
+}
+
+.font-readex {
+  font-family: 'Readex Pro', 'IBM Plex Sans Arabic', sans-serif;
+}
+
+.font-alexandria {
+  font-family: 'Alexandria', 'IBM Plex Sans Arabic', sans-serif;
+}
+
+.font-editorial {
+  font-family: 'Playfair Display', serif;
+}
+
+@layer utilities {
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideInRtl {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes slideInLtr {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes scaleUp {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slideDown {
+    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slideInRtl {
+    animation: slideInRtl 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-slideInLtr {
+    animation: slideInLtr 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-scaleUp {
+    animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
