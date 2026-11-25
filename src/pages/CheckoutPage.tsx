@@ -83,7 +83,7 @@ export const CheckoutPage: React.FC = () => {
 
   // Shipping & Payment Methods
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
-  const [paymentMethod, setPaymentMethod] = useState('mada');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
 
   // Card Inputs
   const [cardholderName, setCardholderName] = useState('');
@@ -573,7 +573,7 @@ export const CheckoutPage: React.FC = () => {
 
             {/* Payment Method Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PAYMENT_METHODS.map((method, idx) => {
+              {PAYMENT_METHODS.filter((m) => m.id === 'cod').map((method, idx) => {
                 const isSelected = paymentMethod === method.id;
                 const IconComponent = method.icon;
                 return (

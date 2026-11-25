@@ -189,7 +189,7 @@ export const OrderDetailPage: React.FC = () => {
   };
 
   const steps = [
-    { title: 'تم استلام وتوثيق الطلب', desc: 'تم استلام الطلب وتأكيد الدفع المشفر', completed: true },
+    { title: 'تم استلام وتوثيق الطلب', desc: 'تم استلام الطلب، والدفع نقداً عند الاستلام', completed: true },
     { title: 'تجهيز وتغليف المقتنيات', desc: 'فحص الجودة الدقيق والتغليف الملكي المخملي', completed: order.status !== 'pending' && order.status !== 'cancelled' },
     { title: 'في الطريق مع الشاحن المعتمد', desc: 'تسليم الطرد للشحن السريع المخصص', completed: order.status === 'shipped' || order.status === 'delivered' },
     { title: 'تم التسليم والتوقيع', desc: 'استلام مباشر وتوقيع إيصال الاستلام', completed: order.status === 'delivered' }
