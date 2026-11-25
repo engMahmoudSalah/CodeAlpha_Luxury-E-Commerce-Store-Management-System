@@ -874,7 +874,7 @@ class UnifiedCommerceStore {
     syncItemToFirestore('orders', newOrder);
     fetch('/api/orders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'ord-' + newOrder.id },
       body: JSON.stringify({
         customer: {
           name: newOrder.customerName,

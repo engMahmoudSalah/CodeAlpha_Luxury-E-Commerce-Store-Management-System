@@ -1,7 +1,68 @@
 // Fakhama storefront API on Cloudflare Workers + KV. Same JSON contract as the Express server in /server.
 // Products are a read-only catalog (bundled); users, orders, addresses and stock live in KV.
+import { DurableObject } from "cloudflare:workers";
 const PRODUCTS = /*PRODUCTS*/[];
 const enc = new TextEncoder();
+// ---- Transactional store: one SQLite-backed Durable Object. It is single-threaded and the order/cancel
+// paths run inside transactionSync, so stock, orders and idempotency records change together or not at all.
+export class Shop extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env); this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS stock(product_id INTEGER PRIMARY KEY, qty INTEGER NOT NULL CHECK(qty >= 0));
+CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, idem TEXT, status TEXT NOT NULL, data TEXT NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_idem ON orders(user_id, idem) WHERE idem IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
+  }
+  one(q, ...a) { for (const r of this.sql.exec(q, ...a)) return r; return null; }
+  async getStock() { const m = {}; for (const r of this.sql.exec("SELECT product_id, qty FROM stock")) m[r.product_id] = r.qty; return m; }
+  async createUser(u) {
+    if (this.one("SELECT 1 AS x FROM users WHERE email = ?", u.email)) return false;
+    this.sql.exec("INSERT INTO users(id, email, data) VALUES(?, ?, ?)", u.id, u.email, JSON.stringify(u)); return true;
+  }
+  async getUserByEmail(email) { const r = this.one("SELECT data FROM users WHERE email = ?", email); return r ? JSON.parse(r.data) : null; }
+  async getUserById(id) { const r = this.one("SELECT data FROM users WHERE id = ?", id); return r ? JSON.parse(r.data) : null; }
+  async saveUser(u) { this.sql.exec("UPDATE users SET data = ? WHERE id = ?", JSON.stringify(u), u.id); }
+  async createOrder(uid, cust, items, idem) {
+    return this.ctx.storage.transactionSync(() => {
+      if (idem) { const e = this.one("SELECT data FROM orders WHERE user_id = ? AND idem = ?", uid, idem); if (e) return { order: JSON.parse(e.data), replay: true }; }
+      const lines = []; let total = 0; const cur = {};
+      for (const it of items) {
+        const pr = PRODUCTS.find((x) => x.id === it.productId);
+        if (!pr) return { error: "PRODUCT_NOT_FOUND", message: `Product with ID ${it.productId} not found.` };
+        const row = this.one("SELECT qty FROM stock WHERE product_id = ?", pr.id), have = row ? row.qty : pr.stock;
+        if (have < it.quantity) return { error: "INSUFFICIENT_STOCK", message: `Insufficient stock for ${pr.name}. Only ${have} left.` };
+        cur[pr.id] = have; lines.push({ productId: pr.id, name: pr.name, imageUrl: pr.image_url, quantity: it.quantity, price: pr.price }); total += pr.price * it.quantity;
+      }
+      for (const l of lines) this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", l.productId, cur[l.productId] - l.quantity);
+      const mx = this.one("SELECT MAX(id) AS m FROM orders"), id = Math.max(1000, mx && mx.m ? mx.m : 0) + 1;
+      const o = { id, userId: uid, total: +total.toFixed(2), status: "completed", customer: cust, items: lines, createdAt: new Date().toISOString() };
+      this.sql.exec("INSERT INTO orders(id, user_id, idem, status, data) VALUES(?, ?, ?, ?, ?)", id, uid, idem || null, o.status, JSON.stringify(o));
+      return { order: o };
+    });
+  }
+  async listOrders(uid) { return [...this.sql.exec("SELECT data FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 100", uid)].map((r) => JSON.parse(r.data)); }
+  async getOrder(uid, id) { const r = this.one("SELECT data FROM orders WHERE user_id = ? AND id = ?", uid, id); return r ? JSON.parse(r.data) : null; }
+  async cancelOrder(uid, id) {
+    return this.ctx.storage.transactionSync(() => {
+      const r = this.one("SELECT data, status FROM orders WHERE user_id = ? AND id = ?", uid, id);
+      if (!r) return { error: "ORDER_NOT_FOUND" };
+      const o = JSON.parse(r.data);
+      if (r.status === "cancelled") return { order: o, already: true }; // idempotent: stock is restored exactly once
+      if (r.status !== "completed" && r.status !== "pending") return { error: "FORBIDDEN" };
+      for (const i of o.items) {
+        const pr = PRODUCTS.find((x) => x.id === i.productId); if (!pr) continue;
+        const row = this.one("SELECT qty FROM stock WHERE product_id = ?", pr.id), have = row ? row.qty : pr.stock;
+        this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", pr.id, have + i.quantity);
+      }
+      o.status = "cancelled";
+      this.sql.exec("UPDATE orders SET status = 'cancelled', data = ? WHERE id = ?", JSON.stringify(o), id);
+      return { order: o };
+    });
+  }
+}
+const shop = (env) => env.SHOP.get(env.SHOP.idFromName("main"));
+
 const H = { "content-type": "application/json; charset=utf-8" };
 const ok = (data, message, status = 200, extra) => new Response(JSON.stringify({ success: true, data, message }), { status, headers: { ...H, ...(extra || {}) } });
 const fail = (status, code, message) => new Response(JSON.stringify({ success: false, error: { code, message } }), { status, headers: H });
@@ -29,10 +90,10 @@ async function readToken(env, req) {
 }
 const cookie = (t, age) => `ecommerce.sid=${encodeURIComponent(t)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${age}`;
 const pub = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone || null, created_at: u.created_at });
-const getUser = async (env, id) => { const email = await env.STORE.get("uid:" + id); return email ? env.STORE.get("u:" + email, "json") : null; };
-const putUser = (env, u) => env.STORE.put("u:" + u.email, JSON.stringify(u));
+const getUser = (env, id) => shop(env).getUserById(id);
+const putUser = (env, u) => shop(env).saveUser(u);
 
-async function stockMap(env) { return (await env.STORE.get("stock", "json")) || {}; }
+async function stockMap(env) { return shop(env).getStock(); }
 const stockOf = (p, m) => (m[p.id] !== undefined ? m[p.id] : p.stock);
 const withStock = (p, m) => ({ ...p, stock: stockOf(p, m) });
 
@@ -99,10 +160,9 @@ async function handle(req, env, url) {
     if (!name) return fail(400, "INVALID_INPUT", "Name is required");
     if (!email.includes("@") || email.length > 200) return fail(400, "INVALID_INPUT", "Valid email is required");
     if (pw.length < 6 || pw.length > 200) return fail(400, "INVALID_INPUT", "Password must be at least 6 characters");
-    if (await env.STORE.get("u:" + email)) return fail(409, "EMAIL_EXISTS", "An account with this email already exists.");
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const u = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name: name.slice(0, 100), email, phone: null, salt: b64(salt), hash: await pbkdf2(pw, salt), created_at: new Date().toISOString(), addresses: [] };
-    await putUser(env, u); await env.STORE.put("uid:" + u.id, email);
+    if (!(await shop(env).createUser(u))) return fail(409, "EMAIL_EXISTS", "An account with this email already exists.");
     const t = await makeToken(env, u.id);
     return ok({ user: pub(u), token: t }, "Registration successful.", 201, { "set-cookie": cookie(t, 604800) });
   }
@@ -110,7 +170,7 @@ async function handle(req, env, url) {
     const b = await readJson(req), email = str(b.email).toLowerCase(), pw = typeof b.password === "string" ? b.password : "";
     const bad = fail(401, "INVALID_CREDENTIALS", "Invalid email or password.");
     if (!email || !pw) return bad;
-    const u = await env.STORE.get("u:" + email, "json");
+    const u = await shop(env).getUserByEmail(email);
     if (!u || (await pbkdf2(pw, unb64(u.salt))) !== u.hash) return bad;
     const t = await makeToken(env, u.id);
     return ok({ user: pub(u), token: t }, "Login successful.", 200, { "set-cookie": cookie(t, 604800) });
@@ -189,18 +249,16 @@ ${ctx}`;
     if (mid && mid[2] && m === "PUT") {
       // Owner may cancel their own order; everything else is admin-only.
       const u = await need(); if (!u) return fail(401, "UNAUTHORIZED", "Authentication required.");
-      const b = await readJson(req), list = (await env.STORE.get("o:" + u.id, "json")) || [], o = list.find((x) => x.id === +mid[1]);
-      if (!o) return fail(404, "ORDER_NOT_FOUND", "Order not found.");
-      if (b.status !== "cancelled" || o.status !== "completed" && o.status !== "pending") return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
-      o.status = "cancelled";
-      const sm = await stockMap(env); o.items.forEach((i) => { const pr = PRODUCTS.find((x) => x.id === i.productId); if (pr) sm[pr.id] = stockOf(pr, sm) + i.quantity; });
-      await env.STORE.put("stock", JSON.stringify(sm)); await env.STORE.put("o:" + u.id, JSON.stringify(list));
-      return ok({ order: formatOrder(o) }, "Order updated.");
+      const b = await readJson(req);
+      if (b.status !== "cancelled") return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
+      const r = await shop(env).cancelOrder(u.id, +mid[1]);
+      if (r.error === "ORDER_NOT_FOUND") return fail(404, "ORDER_NOT_FOUND", "Order not found.");
+      if (r.error) return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
+      return ok({ order: formatOrder(r.order) }, "Order updated.");
     }
     const u = await need(); if (!u) return fail(401, "UNAUTHORIZED", "Authentication required. Please log in to continue.");
-    const list = (await env.STORE.get("o:" + u.id, "json")) || [];
-    if (p === "/api/orders" && m === "GET") { const orders = list.slice().reverse().map(formatOrder); return ok({ orders, total: orders.length }, "Orders retrieved successfully."); }
-    if (mid && !mid[2] && m === "GET") { const o = list.find((x) => x.id === +mid[1]); return o ? ok({ order: formatOrder(o) }) : fail(404, "ORDER_NOT_FOUND", "Order not found."); }
+    if (p === "/api/orders" && m === "GET") { const orders = (await shop(env).listOrders(u.id)).map(formatOrder); return ok({ orders, total: orders.length }, "Orders retrieved successfully."); }
+    if (mid && !mid[2] && m === "GET") { const o = await shop(env).getOrder(u.id, +mid[1]); return o ? ok({ order: formatOrder(o) }) : fail(404, "ORDER_NOT_FOUND", "Order not found."); }
     if (p === "/api/orders" && m === "POST") {
       const b = await readJson(req), items = b.items;
       if (!Array.isArray(items) || !items.length) return fail(400, "EMPTY_CART", "Order must contain at least one item.");
@@ -212,23 +270,19 @@ ${ctx}`;
       const need2 = { name: "Customer name", address: "Shipping address", city: "City", postalCode: "Postal code", phone: "Phone number" };
       for (const k in need2) if (!cust[k]) return fail(400, "VALIDATION_ERROR", need2[k] + " is required.");
       if (!cust.email.includes("@")) return fail(400, "VALIDATION_ERROR", "A valid customer email is required.");
-      const sm = await stockMap(env), seen = new Set(), lines = []; let total = 0;
+      const seen = new Set(), clean = [];
       for (let i = 0; i < items.length; i++) {
         const it = items[i] || {};
         if (!Number.isInteger(it.productId) || it.productId <= 0) return fail(400, "VALIDATION_ERROR", `Item at index ${i} has an invalid productId. Must be a positive integer.`);
         if (!Number.isInteger(it.quantity) || it.quantity <= 0 || it.quantity > 99) return fail(400, "VALIDATION_ERROR", `Item at index ${i} has an invalid quantity.`);
         if (seen.has(it.productId)) return fail(400, "VALIDATION_ERROR", `Duplicate productId ${it.productId} in order.`);
-        seen.add(it.productId);
-        const pr = PRODUCTS.find((x) => x.id === it.productId);
-        if (!pr) return fail(404, "PRODUCT_NOT_FOUND", `Product with ID ${it.productId} not found.`);
-        if (stockOf(pr, sm) < it.quantity) return fail(409, "INSUFFICIENT_STOCK", `Insufficient stock for ${pr.name}. Only ${stockOf(pr, sm)} left.`);
-        lines.push({ productId: pr.id, name: pr.name, imageUrl: pr.image_url, quantity: it.quantity, price: pr.price }); total += pr.price * it.quantity;
+        seen.add(it.productId); clean.push({ productId: it.productId, quantity: it.quantity });
       }
-      lines.forEach((l) => (sm[l.productId] = stockOf(PRODUCTS.find((x) => x.id === l.productId), sm) - l.quantity));
-      const meta = (await env.STORE.get("meta", "json")) || { order: 1000 }; meta.order += 1;
-      const o = { id: meta.order, userId: u.id, total: +total.toFixed(2), status: "completed", customer: cust, items: lines, createdAt: new Date().toISOString() };
-      list.push(o);
-      await Promise.all([env.STORE.put("stock", JSON.stringify(sm)), env.STORE.put("meta", JSON.stringify(meta)), env.STORE.put("o:" + u.id, JSON.stringify(list.slice(-100)))]);
+      const idem = str(req.headers.get("idempotency-key")).slice(0, 100) || null;
+      const r = await shop(env).createOrder(u.id, cust, clean, idem);
+      if (r.error) return fail(r.error === "PRODUCT_NOT_FOUND" ? 404 : 409, r.error, r.message);
+      const o = r.order;
+      if (r.replay) return ok({ order: formatOrder(o) }, "Order already created.", 200);
       return ok({ order: formatOrder(o) }, "Order created successfully.", 201);
     }
     return fail(404, "NOT_FOUND", "Route not found.");

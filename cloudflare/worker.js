@@ -1,7 +1,68 @@
 // Fakhama storefront API on Cloudflare Workers + KV. Same JSON contract as the Express server in /server.
 // Products are a read-only catalog (bundled); users, orders, addresses and stock live in KV.
+import { DurableObject } from "cloudflare:workers";
 const PRODUCTS = [{"id":1,"name":"AeroPulse Wireless Noise-Canceling Headphones","description":"Premium over-ear wireless headphones featuring active hybrid noise cancellation, 40-hour battery life, and crystal-clear high-fidelity sound.","price":199.99,"image_url":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80","stock":25,"category":"Audio","created_at":"2026-01-01T00:00:00.000Z"},{"id":2,"name":"Apex Pro Mechanical Gaming Keyboard","description":"Ultra-responsive RGB mechanical keyboard with custom linear switches, aircraft-grade aluminum frame, and magnetic wrist rest.","price":129.99,"image_url":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80","stock":18,"category":"Gaming","created_at":"2026-01-01T01:00:00.000Z"},{"id":3,"name":"Quantum Precision Wireless Gaming Mouse","description":"Ergonomic 26,000 DPI optical sensor mouse with ultra-low latency 2.4GHz wireless connection and 8 programmable buttons.","price":79.99,"image_url":"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80","stock":30,"category":"Gaming","created_at":"2026-01-01T02:00:00.000Z"},{"id":4,"name":"Vanguard 4K Ultra-HD Monitor 27-inch","description":"IPS professional creative and productivity display with 99% sRGB color gamut, HDR400, USB-C 90W power delivery, and ultra-thin bezels.","price":349.99,"image_url":"https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&q=80","stock":12,"category":"Electronics","created_at":"2026-01-01T03:00:00.000Z"},{"id":5,"name":"Lumina Smart Ambient Desk Lamp","description":"Minimalist aluminum LED desk lamp with touch dimming, adjustable color temperature (2700K-6500K), and integrated Qi wireless charging pad.","price":59.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":40,"category":"Home & Office","created_at":"2026-01-01T04:00:00.000Z"},{"id":6,"name":"Horizon Fit Smartwatch Series 5","description":"All-day health & fitness companion with AMOLED always-on display, heart rate & SpO2 tracking, GPS, and 7-day battery life.","price":149.99,"image_url":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80","stock":22,"category":"Wearables","created_at":"2026-01-01T05:00:00.000Z"},{"id":7,"name":"Nomad Rugged 20,000mAh Power Bank","description":"Heavy-duty portable fast charger with 65W USB-C Power Delivery, dual outputs, and aircraft-grade shock-resistant casing.","price":49.99,"image_url":"https://images.unsplash.com/photo-1609592426868-b80894589d14?w=800&q=80","stock":50,"category":"Accessories","created_at":"2026-01-01T06:00:00.000Z"},{"id":8,"name":"StudioWave Hi-Res USB-C Microphone","description":"Studio-grade cardioid condenser microphone with built-in pop filter, zero-latency headphone monitoring, and plug-and-play simplicity.","price":89.99,"image_url":"https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&q=80","stock":15,"category":"Audio","created_at":"2026-01-01T07:00:00.000Z"},{"id":9,"name":"ErgoComfort Memory Foam Seat Cushion","description":"Orthopedic memory foam seat cushion designed for ergonomic lumbar support, posture alignment, and pressure relief during long work sessions.","price":34.99,"image_url":"https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80","stock":35,"category":"Home & Office","created_at":"2026-01-01T08:00:00.000Z"},{"id":10,"name":"SoundSphere Portable Bluetooth Speaker","description":"360-degree immersive audio with deep bass, IPX7 waterproof rating, 24-hour playtime, and true wireless stereo pairing.","price":69.99,"image_url":"https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80","stock":28,"category":"Audio","created_at":"2026-01-01T09:00:00.000Z"},{"id":11,"name":"Executive Vegan Leather Laptop Sleeve 14-16\"","description":"Slim water-resistant carrying case with magnetic closure, soft microfiber interior lining, and dedicated accessory pocket.","price":39.99,"image_url":"https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80","stock":45,"category":"Accessories","created_at":"2026-01-01T10:00:00.000Z"},{"id":12,"name":"AeroStream High-Speed WiFi 6 Router","description":"Dual-band AX3000 wireless gigabit router with beamforming technology, WPA3 security, and seamless coverage up to 2,500 sq ft.","price":119.99,"image_url":"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80","stock":14,"category":"Electronics","created_at":"2026-01-01T11:00:00.000Z"},{"id":13,"name":"Titan Curved Ultrawide OLED Gaming Monitor 49-inch","description":"Quantum Dot OLED 240Hz 0.03ms gaming display with 5120x1440 resolution, dual QHD immersion, and HDR True Black 400.","price":899.99,"image_url":"https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&q=80","stock":8,"category":"Electronics","created_at":"2026-01-01T12:00:00.000Z"},{"id":14,"name":"SonicPro Studio Monitor Headphones","description":"Flat-response studio reference headphones engineered for professional mixing, mastering, and critical acoustic listening.","price":249.99,"image_url":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80","stock":16,"category":"Audio","created_at":"2026-01-01T13:00:00.000Z"},{"id":15,"name":"PulseFit GPS Fitness Tracker Band","description":"Ultra-lightweight activity tracker with built-in GPS, multi-sport analytics, continuous SpO2 monitoring, and 10-day battery capacity.","price":89.99,"image_url":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80","stock":32,"category":"Wearables","created_at":"2026-01-01T14:00:00.000Z"},{"id":16,"name":"PrismRGB Desktop Cable Management Station","description":"Weighted magnetic cable routing organizer with subtle ambient ARGB underglow and silicone cable channels.","price":29.99,"image_url":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80","stock":60,"category":"Accessories","created_at":"2026-01-01T15:00:00.000Z"},{"id":17,"name":"NovaLite Portable LED Video Light","description":"Full-spectrum Bi-Color LED video panel with 2500K-8500K adjustable CRI 97+ output and integrated OLED control panel.","price":44.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":25,"category":"Photography","created_at":"2026-01-01T16:00:00.000Z"},{"id":18,"name":"ZenDesk Bamboo Ergonomic Riser","description":"Sustainably sourced solid bamboo desk riser with dual storage drawers and cable pass-through channels.","price":54.99,"image_url":"https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80","stock":20,"category":"Home & Office","created_at":"2026-01-01T17:00:00.000Z"},{"id":19,"name":"CyberDeck Modular Mechanical Numpad","description":"Hot-swappable wireless numeric keypad with programmable rotary knob and anodized aluminum chassis.","price":49.99,"image_url":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80","stock":28,"category":"Gaming","created_at":"2026-01-01T18:00:00.000Z"},{"id":20,"name":"ApexStream 4K Ultra Webcam with Dual Mics","description":"Pro streaming webcam with Sony STARVIS sensor, auto-framing AI focus, HDR video encoding, and dual stereo mics.","price":109.99,"image_url":"https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&q=80","stock":19,"category":"Electronics","created_at":"2026-01-01T19:00:00.000Z"},{"id":21,"name":"AuraGlow Smart LED Light Strip 10m","description":"Addressable RGBIC LED light strip with Music Sync, Apple HomeKit & Google Assistant integration, and fluid transitions.","price":39.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":45,"category":"Smart Home","created_at":"2026-01-01T20:00:00.000Z"},{"id":22,"name":"Velocity Fast Magnetic Wireless Charger","description":"15W MagSafe compatible wireless charging pad with braided nylon cable and slim aircraft-grade aluminum casing.","price":34.99,"image_url":"https://images.unsplash.com/photo-1609592426868-b80894589d14?w=800&q=80","stock":55,"category":"Accessories","created_at":"2026-01-01T21:00:00.000Z"},{"id":23,"name":"HyperCool Dual-Fan Laptop Cooling Pad","description":"Quiet dual 140mm fan cooling stand with adjustable tilt angles and dual USB pass-through ports.","price":39.99,"image_url":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80","stock":30,"category":"Accessories","created_at":"2026-01-01T22:00:00.000Z"},{"id":24,"name":"AcousticBass Active Subwoofer System","description":"Compact 8-inch powered studio subwoofer delivering punchy 100W RMS low-frequency extension down to 30Hz.","price":179.99,"image_url":"https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80","stock":12,"category":"Audio","created_at":"2026-01-01T23:00:00.000Z"},{"id":25,"name":"ProFrame Digital Canvas Photo Frame 15-inch","description":"1080p IPS Wi-Fi digital picture frame with matte anti-glare glass and instant smartphone photo synchronization.","price":199.99,"image_url":"https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&q=80","stock":14,"category":"Smart Home","created_at":"2026-01-02T00:00:00.000Z"},{"id":26,"name":"OmniGrip Custom Gaming Controller Wireless","description":"Pro controller with hall-effect anti-drift joysticks, remappable rear paddles, and adjustable trigger locks.","price":69.99,"image_url":"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80","stock":26,"category":"Gaming","created_at":"2026-01-02T01:00:00.000Z"},{"id":27,"name":"CleanAir Desktop HEPA Air Purifier","description":"True HEPA H13 filtration air purifier removing 99.97% of airborne dust, pollen, and odor with whisper-quiet sleep mode.","price":89.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":22,"category":"Home & Office","created_at":"2026-01-02T02:00:00.000Z"},{"id":28,"name":"Vantage Mirrorless Camera Shoulder Bag","description":"Weatherproof canvas camera bag with customizable padded dividers and rapid side access zipper.","price":74.99,"image_url":"https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80","stock":18,"category":"Photography","created_at":"2026-01-02T03:00:00.000Z"},{"id":29,"name":"FocusBar Ultra Monitor Screenbar Lamp","description":"Asymmetric optical desktop light bar designed to eliminate screen glare and reduce eye strain.","price":64.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":35,"category":"Home & Office","created_at":"2026-01-02T04:00:00.000Z"},{"id":30,"name":"ElectroPod TWS Earbuds with Wireless Charging","description":"True wireless ANC earbuds with spatial audio, environmental noise reduction, and IPX5 splash resistance.","price":119.99,"image_url":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80","stock":40,"category":"Audio","created_at":"2026-01-02T05:00:00.000Z"},{"id":31,"name":"PowerGrid 100W GaN 4-Port Fast Desktop Charger","description":"Ultra-compact Gallium Nitride charger supporting 100W USB-C Power Delivery for laptops, tablets, and phones simultaneously.","price":59.99,"image_url":"https://images.unsplash.com/photo-1609592426868-b80894589d14?w=800&q=80","stock":50,"category":"Accessories","created_at":"2026-01-02T06:00:00.000Z"},{"id":32,"name":"Matrix3D Precision Gaming Mousepad XL","description":"Micro-woven cloth desk pad with anti-fray stitched edges and high-grip rubber backing.","price":24.99,"image_url":"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80","stock":75,"category":"Gaming","created_at":"2026-01-02T07:00:00.000Z"},{"id":33,"name":"SmartSync Wi-Fi Smart Plug Trio Pack","description":"Set of 3 smart plugs with energy monitoring, scheduling timer, and voice control via Alexa & Google Home.","price":29.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":40,"category":"Smart Home","created_at":"2026-01-02T08:00:00.000Z"},{"id":34,"name":"Horizon Glass Smart Scales with Body Mass Telemetry","description":"Bluetooth bio-impedance smart weight scale tracking body fat %, muscle mass, hydration, and BMI trends.","price":49.99,"image_url":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80","stock":28,"category":"Wearables","created_at":"2026-01-02T09:00:00.000Z"},{"id":35,"name":"TerraTouch Felt Desk Mat & Mouse Pad","description":"Natural merino wool blend felt desk surface providing thermal warmth and smooth mouse tracking.","price":29.99,"image_url":"https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80","stock":35,"category":"Home & Office","created_at":"2026-01-02T10:00:00.000Z"},{"id":36,"name":"CinemaSound 5.1 Wireless Soundbar System","description":"Dolby Atmos spatial soundbar with wireless rear speakers and 10-inch down-firing wireless subwoofer.","price":329.99,"image_url":"https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80","stock":10,"category":"Audio","created_at":"2026-01-02T11:00:00.000Z"},{"id":37,"name":"VisionCam 360 Indoor Security Camera","description":"Pan-and-tilt 2K smart indoor security camera with AI motion tracking, night vision, and two-way audio.","price":59.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":30,"category":"Smart Home","created_at":"2026-01-02T12:00:00.000Z"},{"id":38,"name":"CarbonShield Waterproof Hard-Shell Backpack","description":"Impact-resistant hardshell travel backpack with TSA combination lock and anti-theft hidden pockets.","price":89.99,"image_url":"https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80","stock":20,"category":"Accessories","created_at":"2026-01-02T13:00:00.000Z"},{"id":39,"name":"PrecisionPro Aluminum Camera Tripod","description":"Lightweight travel tripod with 360-degree panoramic ball head, quick-release plate, and inverted macro setup.","price":129.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":15,"category":"Photography","created_at":"2026-01-02T14:00:00.000Z"},{"id":40,"name":"FlightDeck HOTAS Flight Simulator Joystick","description":"Dual-throttle and flight stick combo with 30 programmable buttons for space and aerial combat simulation.","price":159.99,"image_url":"https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&q=80","stock":12,"category":"Gaming","created_at":"2026-01-02T15:00:00.000Z"},{"id":41,"name":"SolarPulse Emergency Solar Battery Bank 30,000mAh","description":"Rugged outdoor power station with built-in solar panels, 400 lumen LED flashlight, and IP66 water resistance.","price":69.99,"image_url":"https://images.unsplash.com/photo-1609592426868-b80894589d14?w=800&q=80","stock":25,"category":"Accessories","created_at":"2026-01-02T16:00:00.000Z"},{"id":42,"name":"LuxePro Carbon Fiber Studio Headphones","description":"Ultra-lightweight open-back reference studio headphones featuring custom 50mm beryllium drivers, real carbon fiber earcups, and detachable oxygen-free copper cabling.","price":299.99,"image_url":"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80","stock":18,"category":"Audio","created_at":"2026-01-02T17:00:00.000Z"},{"id":43,"name":"CyberKey Hardware Security Token Duo","description":"FIDO2 / U2F certified hardware authentication keys for encrypted multi-factor account protection.","price":49.99,"image_url":"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80","stock":50,"category":"Electronics","created_at":"2026-01-02T18:00:00.000Z"},{"id":44,"name":"StreamDock Programmable Control Pad 15-Key","description":"15 customizable LCD keys for triggering live scenes, launching media, and controlling studio gear instantly.","price":139.99,"image_url":"https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&q=80","stock":22,"category":"Gaming","created_at":"2026-01-02T19:00:00.000Z"},{"id":45,"name":"ThermoSip Smart Temperature Control Travel Mug","description":"App-controlled heated travel mug keeping drinks at your preferred temperature (120°F - 145°F) for up to 3 hours.","price":99.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":20,"category":"Home & Office","created_at":"2026-01-02T20:00:00.000Z"},{"id":46,"name":"NanoBeams Modular Smart Wall Light Panels 9-Pack","description":"Interlocking geometric RGBIC light bars creating customized dynamic wall lighting layouts.","price":179.99,"image_url":"https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800&q=80","stock":15,"category":"Smart Home","created_at":"2026-01-02T21:00:00.000Z"},{"id":47,"name":"AeroRing Minimalist Titanium Health Tracker Ring","description":"Sleek grade-5 titanium smart ring tracking sleep stages, body temperature variations, heart rate, and recovery score.","price":199.99,"image_url":"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&q=80","stock":14,"category":"Wearables","created_at":"2026-01-02T22:00:00.000Z"},{"id":48,"name":"UltraDrive 2TB Rugged External NVMe SSD","description":"Ultra-fast 2050MB/s USB 3.2 Gen 2x2 portable solid-state drive with IP65 dust/water protection.","price":189.99,"image_url":"https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80","stock":30,"category":"Electronics","created_at":"2026-01-02T23:00:00.000Z"},{"id":49,"name":"SoundBar Pro Cinematic Surround Speaker","description":"High-power 2.1 acoustic channel soundbar with HDMI eARC connection and optical digital input.","price":149.99,"image_url":"https://images.unsplash.com/photo-1545454675-3531b543be5d?w=800&q=80","stock":25,"category":"Audio","created_at":"2026-01-03T00:00:00.000Z"},{"id":50,"name":"Apex Desk Mat Precision Stitch Edition","description":"Water-repellent micro-weave desk pad with reinforced edge stitching and non-slip natural rubber base.","price":34.99,"image_url":"https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80","stock":40,"category":"Home & Office","created_at":"2026-01-03T01:00:00.000Z"}];
 const enc = new TextEncoder();
+// ---- Transactional store: one SQLite-backed Durable Object. It is single-threaded and the order/cancel
+// paths run inside transactionSync, so stock, orders and idempotency records change together or not at all.
+export class Shop extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env); this.sql = ctx.storage.sql;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, data TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS stock(product_id INTEGER PRIMARY KEY, qty INTEGER NOT NULL CHECK(qty >= 0));
+CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, idem TEXT, status TEXT NOT NULL, data TEXT NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_idem ON orders(user_id, idem) WHERE idem IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
+  }
+  one(q, ...a) { for (const r of this.sql.exec(q, ...a)) return r; return null; }
+  async getStock() { const m = {}; for (const r of this.sql.exec("SELECT product_id, qty FROM stock")) m[r.product_id] = r.qty; return m; }
+  async createUser(u) {
+    if (this.one("SELECT 1 AS x FROM users WHERE email = ?", u.email)) return false;
+    this.sql.exec("INSERT INTO users(id, email, data) VALUES(?, ?, ?)", u.id, u.email, JSON.stringify(u)); return true;
+  }
+  async getUserByEmail(email) { const r = this.one("SELECT data FROM users WHERE email = ?", email); return r ? JSON.parse(r.data) : null; }
+  async getUserById(id) { const r = this.one("SELECT data FROM users WHERE id = ?", id); return r ? JSON.parse(r.data) : null; }
+  async saveUser(u) { this.sql.exec("UPDATE users SET data = ? WHERE id = ?", JSON.stringify(u), u.id); }
+  async createOrder(uid, cust, items, idem) {
+    return this.ctx.storage.transactionSync(() => {
+      if (idem) { const e = this.one("SELECT data FROM orders WHERE user_id = ? AND idem = ?", uid, idem); if (e) return { order: JSON.parse(e.data), replay: true }; }
+      const lines = []; let total = 0; const cur = {};
+      for (const it of items) {
+        const pr = PRODUCTS.find((x) => x.id === it.productId);
+        if (!pr) return { error: "PRODUCT_NOT_FOUND", message: `Product with ID ${it.productId} not found.` };
+        const row = this.one("SELECT qty FROM stock WHERE product_id = ?", pr.id), have = row ? row.qty : pr.stock;
+        if (have < it.quantity) return { error: "INSUFFICIENT_STOCK", message: `Insufficient stock for ${pr.name}. Only ${have} left.` };
+        cur[pr.id] = have; lines.push({ productId: pr.id, name: pr.name, imageUrl: pr.image_url, quantity: it.quantity, price: pr.price }); total += pr.price * it.quantity;
+      }
+      for (const l of lines) this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", l.productId, cur[l.productId] - l.quantity);
+      const mx = this.one("SELECT MAX(id) AS m FROM orders"), id = Math.max(1000, mx && mx.m ? mx.m : 0) + 1;
+      const o = { id, userId: uid, total: +total.toFixed(2), status: "completed", customer: cust, items: lines, createdAt: new Date().toISOString() };
+      this.sql.exec("INSERT INTO orders(id, user_id, idem, status, data) VALUES(?, ?, ?, ?, ?)", id, uid, idem || null, o.status, JSON.stringify(o));
+      return { order: o };
+    });
+  }
+  async listOrders(uid) { return [...this.sql.exec("SELECT data FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 100", uid)].map((r) => JSON.parse(r.data)); }
+  async getOrder(uid, id) { const r = this.one("SELECT data FROM orders WHERE user_id = ? AND id = ?", uid, id); return r ? JSON.parse(r.data) : null; }
+  async cancelOrder(uid, id) {
+    return this.ctx.storage.transactionSync(() => {
+      const r = this.one("SELECT data, status FROM orders WHERE user_id = ? AND id = ?", uid, id);
+      if (!r) return { error: "ORDER_NOT_FOUND" };
+      const o = JSON.parse(r.data);
+      if (r.status === "cancelled") return { order: o, already: true }; // idempotent: stock is restored exactly once
+      if (r.status !== "completed" && r.status !== "pending") return { error: "FORBIDDEN" };
+      for (const i of o.items) {
+        const pr = PRODUCTS.find((x) => x.id === i.productId); if (!pr) continue;
+        const row = this.one("SELECT qty FROM stock WHERE product_id = ?", pr.id), have = row ? row.qty : pr.stock;
+        this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", pr.id, have + i.quantity);
+      }
+      o.status = "cancelled";
+      this.sql.exec("UPDATE orders SET status = 'cancelled', data = ? WHERE id = ?", JSON.stringify(o), id);
+      return { order: o };
+    });
+  }
+}
+const shop = (env) => env.SHOP.get(env.SHOP.idFromName("main"));
+
 const H = { "content-type": "application/json; charset=utf-8" };
 const ok = (data, message, status = 200, extra) => new Response(JSON.stringify({ success: true, data, message }), { status, headers: { ...H, ...(extra || {}) } });
 const fail = (status, code, message) => new Response(JSON.stringify({ success: false, error: { code, message } }), { status, headers: H });
@@ -29,10 +90,10 @@ async function readToken(env, req) {
 }
 const cookie = (t, age) => `ecommerce.sid=${encodeURIComponent(t)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${age}`;
 const pub = (u) => ({ id: u.id, name: u.name, email: u.email, phone: u.phone || null, created_at: u.created_at });
-const getUser = async (env, id) => { const email = await env.STORE.get("uid:" + id); return email ? env.STORE.get("u:" + email, "json") : null; };
-const putUser = (env, u) => env.STORE.put("u:" + u.email, JSON.stringify(u));
+const getUser = (env, id) => shop(env).getUserById(id);
+const putUser = (env, u) => shop(env).saveUser(u);
 
-async function stockMap(env) { return (await env.STORE.get("stock", "json")) || {}; }
+async function stockMap(env) { return shop(env).getStock(); }
 const stockOf = (p, m) => (m[p.id] !== undefined ? m[p.id] : p.stock);
 const withStock = (p, m) => ({ ...p, stock: stockOf(p, m) });
 
@@ -99,10 +160,9 @@ async function handle(req, env, url) {
     if (!name) return fail(400, "INVALID_INPUT", "Name is required");
     if (!email.includes("@") || email.length > 200) return fail(400, "INVALID_INPUT", "Valid email is required");
     if (pw.length < 6 || pw.length > 200) return fail(400, "INVALID_INPUT", "Password must be at least 6 characters");
-    if (await env.STORE.get("u:" + email)) return fail(409, "EMAIL_EXISTS", "An account with this email already exists.");
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const u = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name: name.slice(0, 100), email, phone: null, salt: b64(salt), hash: await pbkdf2(pw, salt), created_at: new Date().toISOString(), addresses: [] };
-    await putUser(env, u); await env.STORE.put("uid:" + u.id, email);
+    if (!(await shop(env).createUser(u))) return fail(409, "EMAIL_EXISTS", "An account with this email already exists.");
     const t = await makeToken(env, u.id);
     return ok({ user: pub(u), token: t }, "Registration successful.", 201, { "set-cookie": cookie(t, 604800) });
   }
@@ -110,7 +170,7 @@ async function handle(req, env, url) {
     const b = await readJson(req), email = str(b.email).toLowerCase(), pw = typeof b.password === "string" ? b.password : "";
     const bad = fail(401, "INVALID_CREDENTIALS", "Invalid email or password.");
     if (!email || !pw) return bad;
-    const u = await env.STORE.get("u:" + email, "json");
+    const u = await shop(env).getUserByEmail(email);
     if (!u || (await pbkdf2(pw, unb64(u.salt))) !== u.hash) return bad;
     const t = await makeToken(env, u.id);
     return ok({ user: pub(u), token: t }, "Login successful.", 200, { "set-cookie": cookie(t, 604800) });
@@ -189,18 +249,16 @@ ${ctx}`;
     if (mid && mid[2] && m === "PUT") {
       // Owner may cancel their own order; everything else is admin-only.
       const u = await need(); if (!u) return fail(401, "UNAUTHORIZED", "Authentication required.");
-      const b = await readJson(req), list = (await env.STORE.get("o:" + u.id, "json")) || [], o = list.find((x) => x.id === +mid[1]);
-      if (!o) return fail(404, "ORDER_NOT_FOUND", "Order not found.");
-      if (b.status !== "cancelled" || o.status !== "completed" && o.status !== "pending") return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
-      o.status = "cancelled";
-      const sm = await stockMap(env); o.items.forEach((i) => { const pr = PRODUCTS.find((x) => x.id === i.productId); if (pr) sm[pr.id] = stockOf(pr, sm) + i.quantity; });
-      await env.STORE.put("stock", JSON.stringify(sm)); await env.STORE.put("o:" + u.id, JSON.stringify(list));
-      return ok({ order: formatOrder(o) }, "Order updated.");
+      const b = await readJson(req);
+      if (b.status !== "cancelled") return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
+      const r = await shop(env).cancelOrder(u.id, +mid[1]);
+      if (r.error === "ORDER_NOT_FOUND") return fail(404, "ORDER_NOT_FOUND", "Order not found.");
+      if (r.error) return fail(403, "FORBIDDEN", "Only cancelling your own open order is allowed.");
+      return ok({ order: formatOrder(r.order) }, "Order updated.");
     }
     const u = await need(); if (!u) return fail(401, "UNAUTHORIZED", "Authentication required. Please log in to continue.");
-    const list = (await env.STORE.get("o:" + u.id, "json")) || [];
-    if (p === "/api/orders" && m === "GET") { const orders = list.slice().reverse().map(formatOrder); return ok({ orders, total: orders.length }, "Orders retrieved successfully."); }
-    if (mid && !mid[2] && m === "GET") { const o = list.find((x) => x.id === +mid[1]); return o ? ok({ order: formatOrder(o) }) : fail(404, "ORDER_NOT_FOUND", "Order not found."); }
+    if (p === "/api/orders" && m === "GET") { const orders = (await shop(env).listOrders(u.id)).map(formatOrder); return ok({ orders, total: orders.length }, "Orders retrieved successfully."); }
+    if (mid && !mid[2] && m === "GET") { const o = await shop(env).getOrder(u.id, +mid[1]); return o ? ok({ order: formatOrder(o) }) : fail(404, "ORDER_NOT_FOUND", "Order not found."); }
     if (p === "/api/orders" && m === "POST") {
       const b = await readJson(req), items = b.items;
       if (!Array.isArray(items) || !items.length) return fail(400, "EMPTY_CART", "Order must contain at least one item.");
@@ -212,23 +270,19 @@ ${ctx}`;
       const need2 = { name: "Customer name", address: "Shipping address", city: "City", postalCode: "Postal code", phone: "Phone number" };
       for (const k in need2) if (!cust[k]) return fail(400, "VALIDATION_ERROR", need2[k] + " is required.");
       if (!cust.email.includes("@")) return fail(400, "VALIDATION_ERROR", "A valid customer email is required.");
-      const sm = await stockMap(env), seen = new Set(), lines = []; let total = 0;
+      const seen = new Set(), clean = [];
       for (let i = 0; i < items.length; i++) {
         const it = items[i] || {};
         if (!Number.isInteger(it.productId) || it.productId <= 0) return fail(400, "VALIDATION_ERROR", `Item at index ${i} has an invalid productId. Must be a positive integer.`);
         if (!Number.isInteger(it.quantity) || it.quantity <= 0 || it.quantity > 99) return fail(400, "VALIDATION_ERROR", `Item at index ${i} has an invalid quantity.`);
         if (seen.has(it.productId)) return fail(400, "VALIDATION_ERROR", `Duplicate productId ${it.productId} in order.`);
-        seen.add(it.productId);
-        const pr = PRODUCTS.find((x) => x.id === it.productId);
-        if (!pr) return fail(404, "PRODUCT_NOT_FOUND", `Product with ID ${it.productId} not found.`);
-        if (stockOf(pr, sm) < it.quantity) return fail(409, "INSUFFICIENT_STOCK", `Insufficient stock for ${pr.name}. Only ${stockOf(pr, sm)} left.`);
-        lines.push({ productId: pr.id, name: pr.name, imageUrl: pr.image_url, quantity: it.quantity, price: pr.price }); total += pr.price * it.quantity;
+        seen.add(it.productId); clean.push({ productId: it.productId, quantity: it.quantity });
       }
-      lines.forEach((l) => (sm[l.productId] = stockOf(PRODUCTS.find((x) => x.id === l.productId), sm) - l.quantity));
-      const meta = (await env.STORE.get("meta", "json")) || { order: 1000 }; meta.order += 1;
-      const o = { id: meta.order, userId: u.id, total: +total.toFixed(2), status: "completed", customer: cust, items: lines, createdAt: new Date().toISOString() };
-      list.push(o);
-      await Promise.all([env.STORE.put("stock", JSON.stringify(sm)), env.STORE.put("meta", JSON.stringify(meta)), env.STORE.put("o:" + u.id, JSON.stringify(list.slice(-100)))]);
+      const idem = str(req.headers.get("idempotency-key")).slice(0, 100) || null;
+      const r = await shop(env).createOrder(u.id, cust, clean, idem);
+      if (r.error) return fail(r.error === "PRODUCT_NOT_FOUND" ? 404 : 409, r.error, r.message);
+      const o = r.order;
+      if (r.replay) return ok({ order: formatOrder(o) }, "Order already created.", 200);
       return ok({ order: formatOrder(o) }, "Order created successfully.", 201);
     }
     return fail(404, "NOT_FOUND", "Route not found.");
