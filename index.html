@@ -14,7 +14,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Readex+Pro:wght@300;400;500;600;700&family=Alexandria:wght@300;400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
-  </head>
+  <script>
+/* Fakhama: if a remote product photo fails, swap in the site's own local art so cards never go blank */
+addEventListener("error",function(e){var t=e.target;if(!t||t.tagName!=="IMG"||t.dataset.fb||/\/art\//.test(t.src))return;t.dataset.fb="1";var h=0,s=t.currentSrc||t.src||"";for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;t.src="/art/p"+(h%50+1)+".svg"},true);
+</script>
+</head>
   <body class="bg-[#FAF8F3] text-[#181818] antialiased selection:bg-[#181818] selection:text-white font-arabic">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
