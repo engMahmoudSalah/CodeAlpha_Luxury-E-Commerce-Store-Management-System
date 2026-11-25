@@ -521,7 +521,7 @@ const DynamicProductTile: React.FC<DynamicProductTileProps> = ({
 
                 {/* Top Badge Header */}
                 <div className="relative z-10 w-full flex justify-between items-center gap-1">
-                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${palette.badgeBg} ${palette.tagColor}`}>
+                  <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${palette.badgeBg} ${palette.badgeBg.includes('00E676') ? 'text-[#021811]' : 'text-white'}`}>
                     {currentProduct.tag || 'فخامة'}
                   </span>
                   <Sparkles className="w-3.5 h-3.5 text-[#F5C400] shrink-0" />
