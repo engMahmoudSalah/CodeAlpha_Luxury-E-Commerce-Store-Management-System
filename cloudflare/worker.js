@@ -8,14 +8,17 @@ const enc = new TextEncoder();
 export class Shop extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env); this.sql = ctx.storage.sql;
-    this.sql.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, data TEXT NOT NULL);
+    if (ctx.storage.kv.get("schema_v") !== "2") {
+      this.sql.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, email TEXT UNIQUE NOT NULL, data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS stock(product_id INTEGER PRIMARY KEY, qty INTEGER NOT NULL CHECK(qty >= 0));
 CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, idem TEXT, status TEXT NOT NULL, data TEXT NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_idem ON orders(user_id, idem) WHERE idem IS NOT NULL;
 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
+      ctx.storage.kv.put("schema_v", "2");
+    }
   }
   one(q, ...a) { for (const r of this.sql.exec(q, ...a)) return r; return null; }
-  async getStock() { const m = {}; for (const r of this.sql.exec("SELECT product_id, qty FROM stock")) m[r.product_id] = r.qty; return m; }
+  async getStock() { if (!this._stock) { const m = {}; for (const r of this.sql.exec("SELECT product_id, qty FROM stock")) m[r.product_id] = r.qty; this._stock = m; } return { ...this._stock }; }
   async createUser(u) {
     if (this.one("SELECT 1 AS x FROM users WHERE email = ?", u.email)) return false;
     this.sql.exec("INSERT INTO users(id, email, data) VALUES(?, ?, ?)", u.id, u.email, JSON.stringify(u)); return true;
@@ -34,7 +37,7 @@ CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
         if (have < it.quantity) return { error: "INSUFFICIENT_STOCK", message: `Insufficient stock for ${pr.name}. Only ${have} left.` };
         cur[pr.id] = have; lines.push({ productId: pr.id, name: pr.name, imageUrl: pr.image_url, quantity: it.quantity, price: pr.price }); total += pr.price * it.quantity;
       }
-      for (const l of lines) this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", l.productId, cur[l.productId] - l.quantity);
+      for (const l of lines) this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", l.productId, cur[l.productId] - l.quantity); this._stock = null;
       const mx = this.one("SELECT MAX(id) AS m FROM orders"), id = Math.max(1000, mx && mx.m ? mx.m : 0) + 1;
       const o = { id, userId: uid, total: +total.toFixed(2), status: "pending", customer: cust, items: lines, createdAt: new Date().toISOString() };
       this.sql.exec("INSERT INTO orders(id, user_id, idem, status, data) VALUES(?, ?, ?, ?, ?)", id, uid, idem || null, o.status, JSON.stringify(o));
@@ -53,7 +56,7 @@ CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
       for (const i of o.items) {
         const pr = PRODUCTS.find((x) => x.id === i.productId); if (!pr) continue;
         const row = this.one("SELECT qty FROM stock WHERE product_id = ?", pr.id), have = row ? row.qty : pr.stock;
-        this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", pr.id, have + i.quantity);
+        this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", pr.id, have + i.quantity); this._stock = null;
       }
       o.status = "cancelled";
       this.sql.exec("UPDATE orders SET status = 'cancelled', data = ? WHERE id = ?", JSON.stringify(o), id);
