@@ -53,7 +53,7 @@ export const AIConciergeWidget: React.FC = () => {
     // Show a subtle invitation notification after a few seconds
     const timer = setTimeout(() => {
       if (!isOpen) {
-        setShowNotification(true);
+        if (window.innerWidth >= 640) setShowNotification(true);
       }
     }, 4000);
 
