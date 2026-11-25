@@ -121,7 +121,7 @@ export const AdminLoginPage: React.FC = () => {
               تسجيل دخول المشرفين المعتمدين
             </h1>
             <p className="text-xs text-neutral-400 mt-1">
-              وصول حصري ومشفّر للمشرفين عبر Firebase
+              وصول حصري للمشرفين المعتمدين
             </p>
           </div>
 
@@ -136,6 +136,8 @@ export const AdminLoginPage: React.FC = () => {
           {/* Quick Sign In with Google */}
           <button
             type="button"
+            style={{ display: "none" }}
+            aria-hidden="true"
             onClick={handleGoogleLogin}
             disabled={googleLoading || loading}
             className="w-full mb-4 py-3 px-4 bg-white hover:bg-neutral-100 text-[#181818] font-bold text-xs rounded-xl flex items-center justify-center gap-3 transition-all shadow-md active:scale-[0.99] disabled:opacity-50 cursor-pointer"
@@ -161,7 +163,7 @@ export const AdminLoginPage: React.FC = () => {
             <span>{googleLoading ? 'جاري التحقق عبر Google...' : 'الدخول عبر حساب Google المشرف'}</span>
           </button>
 
-          <div className="flex items-center gap-3 my-5">
+          <div className="flex items-center gap-3 my-5" style={{ display: "none" }}>
             <div className="flex-1 h-px bg-[#262626]" />
             <span className="text-[11px] text-neutral-500 font-medium">أو عبر بيانات الاعتماد</span>
             <div className="flex-1 h-px bg-[#262626]" />
@@ -227,7 +229,7 @@ export const AdminLoginPage: React.FC = () => {
       <footer className="p-6 text-center text-xs text-neutral-500 relative z-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181818] border border-[#262626]">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Firebase Authentication & Firestore RBAC Active</span>
+          <span>الوصول محصور بحسابات الإدارة المعتمدة</span>
         </div>
       </footer>
     </div>
