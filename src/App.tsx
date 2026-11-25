@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
@@ -11,47 +11,47 @@ import { AppLayout } from './layouts/AppLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 import { HomePage } from './pages/HomePage';
-import { ProductsPage } from './pages/ProductsPage';
-import { ProductDetailPage } from './pages/ProductDetailPage';
-import { CartPage } from './pages/CartPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { OrderSuccessPage } from './pages/OrderSuccessPage';
-import { AccountPage } from './pages/AccountPage';
-import { OrdersPage } from './pages/OrdersPage';
-import { OrderDetailPage } from './pages/OrderDetailPage';
-import { TrackOrderPage } from './pages/TrackOrderPage';
-import { WishlistPage } from './pages/WishlistPage';
-import { ComparePage } from './pages/ComparePage';
-import { AboutPage } from './pages/AboutPage';
-import { FaqPage } from './pages/FaqPage';
-import { TermsPage } from './pages/TermsPage';
-import { ContactPage } from './pages/ContactPage';
-import { NotFoundPage } from './pages/NotFoundPage';
-import { AdminLayout } from './admin/components/layout/AdminLayout';
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then((m) => ({ default: m.ProductsPage })));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then((m) => ({ default: m.ProductDetailPage })));
+const CartPage = lazy(() => import('./pages/CartPage').then((m) => ({ default: m.CartPage })));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then((m) => ({ default: m.CheckoutPage })));
+const OrderSuccessPage = lazy(() => import('./pages/OrderSuccessPage').then((m) => ({ default: m.OrderSuccessPage })));
+const AccountPage = lazy(() => import('./pages/AccountPage').then((m) => ({ default: m.AccountPage })));
+const OrdersPage = lazy(() => import('./pages/OrdersPage').then((m) => ({ default: m.OrdersPage })));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage })));
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage').then((m) => ({ default: m.TrackOrderPage })));
+const WishlistPage = lazy(() => import('./pages/WishlistPage').then((m) => ({ default: m.WishlistPage })));
+const ComparePage = lazy(() => import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
+const FaqPage = lazy(() => import('./pages/FaqPage').then((m) => ({ default: m.FaqPage })));
+const TermsPage = lazy(() => import('./pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const ContactPage = lazy(() => import('./pages/ContactPage').then((m) => ({ default: m.ContactPage })));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
+const AdminLayout = lazy(() => import('./admin/components/layout/AdminLayout').then((m) => ({ default: m.AdminLayout })));
 import { AdminProtectedRoute } from './admin/components/auth/AdminProtectedRoute';
-import { AdminLoginPage } from './admin/pages/Auth/AdminLoginPage';
-import { AdminDashboardPage } from './admin/pages/Dashboard/AdminDashboardPage';
-import { AdminProductsPage } from './admin/pages/Products/AdminProductsPage';
-import { AdminProductFormPage } from './admin/pages/Products/AdminProductFormPage';
-import { AdminCategoriesPage } from './admin/pages/Categories/AdminCategoriesPage';
-import { AdminCollectionsPage } from './admin/pages/Collections/AdminCollectionsPage';
-import { AdminInventoryPage } from './admin/pages/Inventory/AdminInventoryPage';
-import { AdminOrdersPage } from './admin/pages/Orders/AdminOrdersPage';
-import { AdminOrderDetailPage } from './admin/pages/Orders/AdminOrderDetailPage';
-import { AdminAbandonedCartsPage } from './admin/pages/Marketing/AdminAbandonedCartsPage';
-import { AdminReturnsPage } from './admin/pages/Sales/AdminReturnsPage';
-import { AdminCustomersPage } from './admin/pages/Customers/AdminCustomersPage';
-import { AdminReviewsPage } from './admin/pages/Customers/AdminReviewsPage';
-import AdminMessagesPage from './admin/pages/Customers/AdminMessagesPage';
-import { AdminCouponsPage } from './admin/pages/Marketing/AdminCouponsPage';
-import { AdminPromotionsPage } from './admin/pages/Marketing/AdminPromotionsPage';
-import AdminSubscribersPage from './admin/pages/Marketing/AdminSubscribersPage';
-import { AdminAnalyticsPage } from './admin/pages/Analytics/AdminAnalyticsPage';
-import { AdminSettingsPage } from './admin/pages/Settings/AdminSettingsPage';
-import { AdminHomepageBuilderPage } from './admin/pages/Content/AdminHomepageBuilderPage';
-import { AdminMediaLibraryPage } from './admin/pages/Content/AdminMediaLibraryPage';
-import { IntegrationTracker } from './admin/pages/IntegrationTracker';
-import { AdminDashboardPlaceholder } from './admin/pages/Dashboard/AdminDashboardPlaceholder';
+const AdminLoginPage = lazy(() => import('./admin/pages/Auth/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage })));
+const AdminDashboardPage = lazy(() => import('./admin/pages/Dashboard/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
+const AdminProductsPage = lazy(() => import('./admin/pages/Products/AdminProductsPage').then((m) => ({ default: m.AdminProductsPage })));
+const AdminProductFormPage = lazy(() => import('./admin/pages/Products/AdminProductFormPage').then((m) => ({ default: m.AdminProductFormPage })));
+const AdminCategoriesPage = lazy(() => import('./admin/pages/Categories/AdminCategoriesPage').then((m) => ({ default: m.AdminCategoriesPage })));
+const AdminCollectionsPage = lazy(() => import('./admin/pages/Collections/AdminCollectionsPage').then((m) => ({ default: m.AdminCollectionsPage })));
+const AdminInventoryPage = lazy(() => import('./admin/pages/Inventory/AdminInventoryPage').then((m) => ({ default: m.AdminInventoryPage })));
+const AdminOrdersPage = lazy(() => import('./admin/pages/Orders/AdminOrdersPage').then((m) => ({ default: m.AdminOrdersPage })));
+const AdminOrderDetailPage = lazy(() => import('./admin/pages/Orders/AdminOrderDetailPage').then((m) => ({ default: m.AdminOrderDetailPage })));
+const AdminAbandonedCartsPage = lazy(() => import('./admin/pages/Marketing/AdminAbandonedCartsPage').then((m) => ({ default: m.AdminAbandonedCartsPage })));
+const AdminReturnsPage = lazy(() => import('./admin/pages/Sales/AdminReturnsPage').then((m) => ({ default: m.AdminReturnsPage })));
+const AdminCustomersPage = lazy(() => import('./admin/pages/Customers/AdminCustomersPage').then((m) => ({ default: m.AdminCustomersPage })));
+const AdminReviewsPage = lazy(() => import('./admin/pages/Customers/AdminReviewsPage').then((m) => ({ default: m.AdminReviewsPage })));
+const AdminMessagesPage = lazy(() => import('./admin/pages/Customers/AdminMessagesPage'));
+const AdminCouponsPage = lazy(() => import('./admin/pages/Marketing/AdminCouponsPage').then((m) => ({ default: m.AdminCouponsPage })));
+const AdminPromotionsPage = lazy(() => import('./admin/pages/Marketing/AdminPromotionsPage').then((m) => ({ default: m.AdminPromotionsPage })));
+const AdminSubscribersPage = lazy(() => import('./admin/pages/Marketing/AdminSubscribersPage'));
+const AdminAnalyticsPage = lazy(() => import('./admin/pages/Analytics/AdminAnalyticsPage').then((m) => ({ default: m.AdminAnalyticsPage })));
+const AdminSettingsPage = lazy(() => import('./admin/pages/Settings/AdminSettingsPage').then((m) => ({ default: m.AdminSettingsPage })));
+const AdminHomepageBuilderPage = lazy(() => import('./admin/pages/Content/AdminHomepageBuilderPage').then((m) => ({ default: m.AdminHomepageBuilderPage })));
+const AdminMediaLibraryPage = lazy(() => import('./admin/pages/Content/AdminMediaLibraryPage').then((m) => ({ default: m.AdminMediaLibraryPage })));
+const IntegrationTracker = lazy(() => import('./admin/pages/IntegrationTracker').then((m) => ({ default: m.IntegrationTracker })));
+const AdminDashboardPlaceholder = lazy(() => import('./admin/pages/Dashboard/AdminDashboardPlaceholder').then((m) => ({ default: m.AdminDashboardPlaceholder })));
 
 
 // Component to scroll to top on path/location change
@@ -75,7 +75,7 @@ export default function App() {
               <CompareProvider>
                 <BrowserRouter>
                   <ScrollToTop />
-                  <Routes>
+                  <Suspense fallback={<div style={{minHeight:"60vh",display:"grid",placeItems:"center",color:"#9a8a5a"}}>...</div>}><Routes>
                     <Route element={<AppLayout />}>
                       {/* Catalog & Home Routes */}
                       <Route path="/" element={<HomePage />} />
@@ -210,7 +210,7 @@ export default function App() {
                       {/* Sub-route fallbacks for upcoming phases */}
                       <Route path="*" element={<AdminDashboardPlaceholder />} />
                     </Route>
-                  </Routes>
+                  </Routes></Suspense>
                 </BrowserRouter>
               </CompareProvider>
             </WishlistProvider>
