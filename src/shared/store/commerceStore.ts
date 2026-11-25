@@ -55,6 +55,7 @@ const STORAGE_KEYS = {
 };
 
 import { syncItemToFirestore, syncDeleteToFirestore, syncArrayToFirestore } from './firestoreSync';
+import { apiClient } from '../../api/client';
 
 // Helper to safely parse localStorage
 function loadFromStorage<T>(key: string, fallback: T): T {
@@ -872,9 +873,10 @@ class UnifiedCommerceStore {
     this.orders.unshift(newOrder);
     saveToStorage(STORAGE_KEYS.ORDERS, this.orders);
     syncItemToFirestore('orders', newOrder);
-    fetch('/api/orders', {
+    // Mirror the order to the server (cash on delivery). Idempotent per local order.
+    apiClient('/api/orders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'ord-' + newOrder.id },
+      headers: { 'Idempotency-Key': 'ord-' + newOrder.orderNumber },
       body: JSON.stringify({
         customer: {
           name: newOrder.customerName,
@@ -885,7 +887,7 @@ class UnifiedCommerceStore {
           postal_code: '11564'
         },
         items: newOrder.items.map((it) => ({
-          product_id: it.productId,
+          productId: it.productId,
           quantity: it.quantity,
         })),
       }),

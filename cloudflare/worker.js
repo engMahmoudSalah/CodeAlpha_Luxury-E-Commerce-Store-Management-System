@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id);`);
       }
       for (const l of lines) this.sql.exec("INSERT INTO stock(product_id, qty) VALUES(?, ?) ON CONFLICT(product_id) DO UPDATE SET qty = excluded.qty", l.productId, cur[l.productId] - l.quantity);
       const mx = this.one("SELECT MAX(id) AS m FROM orders"), id = Math.max(1000, mx && mx.m ? mx.m : 0) + 1;
-      const o = { id, userId: uid, total: +total.toFixed(2), status: "completed", customer: cust, items: lines, createdAt: new Date().toISOString() };
+      const o = { id, userId: uid, total: +total.toFixed(2), status: "pending", customer: cust, items: lines, createdAt: new Date().toISOString() };
       this.sql.exec("INSERT INTO orders(id, user_id, idem, status, data) VALUES(?, ?, ?, ?, ?)", id, uid, idem || null, o.status, JSON.stringify(o));
       return { order: o };
     });
