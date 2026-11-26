@@ -159,9 +159,10 @@ async function handle(req, env, url) {
 
   // ---- auth
   if (p === "/api/auth/register" && m === "POST") {
+    if (await limited(req, "reg", 6, 6e5)) return fail(429, "RATE_LIMITED", "Too many attempts. Please wait a few minutes.");
     const b = await readJson(req), name = str(b.name), email = str(b.email).toLowerCase(), pw = typeof b.password === "string" ? b.password : "";
     if (!name) return fail(400, "INVALID_INPUT", "Name is required");
-    if (!email.includes("@") || email.length > 200) return fail(400, "INVALID_INPUT", "Valid email is required");
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return fail(400, "INVALID_INPUT", "Valid email is required");
     if (pw.length < 6 || pw.length > 200) return fail(400, "INVALID_INPUT", "Password must be at least 6 characters");
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const u = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name: name.slice(0, 100), email, phone: null, salt: b64(salt), hash: await pbkdf2(pw, salt), created_at: new Date().toISOString(), addresses: [] };
@@ -170,6 +171,7 @@ async function handle(req, env, url) {
     return ok({ user: pub(u), token: t }, "Registration successful.", 201, { "set-cookie": cookie(t, 604800) });
   }
   if (p === "/api/auth/login" && m === "POST") {
+    if (await limited(req, "login", 12, 6e5)) return fail(429, "RATE_LIMITED", "Too many attempts. Please wait a few minutes.");
     const b = await readJson(req), email = str(b.email).toLowerCase(), pw = typeof b.password === "string" ? b.password : "";
     const bad = fail(401, "INVALID_CREDENTIALS", "Invalid email or password.");
     if (!email || !pw) return bad;
@@ -293,6 +295,16 @@ ${ctx}`;
   return fail(404, "NOT_FOUND", "Route not found.");
 }
 
+async function limited(req, kind, max, winMs) {
+  const ip = req.headers.get("cf-connecting-ip") || "x", win = Math.floor(Date.now() / winMs);
+  const key = new Request("https://rl.invalid/" + kind + "/" + encodeURIComponent(ip) + "/" + win);
+  try {
+    const hit = await caches.default.match(key);
+    const n = (hit ? parseInt(await hit.text(), 10) || 0 : 0) + 1;
+    await caches.default.put(key, new Response(String(n), { headers: { "cache-control": "max-age=" + Math.ceil(winMs / 1000 + 60) } }));
+    return n > max;
+  } catch { return false; }
+}
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
