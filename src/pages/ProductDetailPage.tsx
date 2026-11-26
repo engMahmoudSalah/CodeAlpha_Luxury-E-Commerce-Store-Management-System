@@ -15,6 +15,7 @@ import { Breadcrumbs } from '../components/ui/Breadcrumbs';
 import { ErrorState } from '../components/ui/ErrorState';
 import { ProductCard } from '../components/product/ProductCard';
 import { ProductGallery } from '../components/product/ProductGallery';
+import { RecentlyViewed } from '../components/product/RecentlyViewed';
 import { ProductReviewsSection } from '../components/product/ProductReviewsSection';
 import { ProductStickyBar } from '../components/product/ProductStickyBar';
 import { ProductBundleSection } from '../components/product/ProductBundleSection';
@@ -667,6 +668,8 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         </section>
       )}
+
+      <RecentlyViewed currentId={product.id} />
 
       {/* Floating Bottom Sticky Bar on Scroll */}
       <ProductStickyBar product={product} visible={showStickyBar} />
