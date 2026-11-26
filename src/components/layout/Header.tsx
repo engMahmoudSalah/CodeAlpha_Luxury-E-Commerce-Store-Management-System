@@ -158,7 +158,7 @@ export const Header: React.FC = () => {
         <div className="bg-[#00875A] text-[#FAF8F3] text-[11px] sm:text-xs font-bold py-1.5 border-b border-[#00704A] select-none relative z-40 w-full" dir="rtl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-2 text-center overflow-hidden">
             <Sparkles className="w-3.5 h-3.5 text-[#FFC700] shrink-0 animate-pulse" />
-            <span className="truncate">{announcementText}</span>
+            <span className="leading-snug sm:truncate">{announcementText}</span>
             <span className="hidden md:inline-block text-[#FFC700] font-mono text-[10px] bg-black/20 px-2 py-0.5 rounded-full border border-white/20">
               {settings?.storeName ? settings.storeName.toUpperCase() : 'LUXE CLUB'}
             </span>
