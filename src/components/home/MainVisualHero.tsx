@@ -607,10 +607,10 @@ export const MainVisualHero: React.FC = () => {
             DYNAMIC MOSAIC TILES GRID (Product Images Auto-Swapping)
             ========================================================================= */}
         <div className="w-full overflow-x-auto no-scrollbar py-4 px-2 flex justify-center">
-          <div className="min-w-[880px] lg:min-w-none w-full max-w-6xl grid grid-cols-7 gap-3 sm:gap-4 items-center justify-center">
+          <div className="min-w-0 sm:min-w-[880px] lg:min-w-none w-full max-w-6xl grid grid-cols-3 sm:grid-cols-7 gap-3 sm:gap-4 items-center justify-center">
             
             {/* COLUMN 1 (Far Left - 4 Product Tiles) */}
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="hidden sm:flex flex-col gap-3 sm:gap-4">
               <DynamicProductTile
                 tileIndex={0}
                 initialProduct={getInitialProduct(0)}
@@ -638,7 +638,7 @@ export const MainVisualHero: React.FC = () => {
             </div>
 
             {/* COLUMN 2 (Inner Left - 3 Product Tiles) */}
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="hidden sm:flex flex-col gap-3 sm:gap-4">
               <DynamicProductTile
                 tileIndex={4}
                 initialProduct={getInitialProduct(4)}
@@ -719,7 +719,7 @@ export const MainVisualHero: React.FC = () => {
             </div>
 
             {/* COLUMN 6 (Inner Right - 3 Product Tiles) */}
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="hidden sm:flex flex-col gap-3 sm:gap-4">
               <DynamicProductTile
                 tileIndex={11}
                 initialProduct={getInitialProduct(11)}
@@ -741,7 +741,7 @@ export const MainVisualHero: React.FC = () => {
             </div>
 
             {/* COLUMN 7 (Far Right - 4 Product Tiles) */}
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="hidden sm:flex flex-col gap-3 sm:gap-4">
               <DynamicProductTile
                 tileIndex={14}
                 initialProduct={getInitialProduct(14)}
@@ -774,7 +774,7 @@ export const MainVisualHero: React.FC = () => {
         {/* =========================================================================
             BOTTOM TYPOGRAPHY SECTION
             ========================================================================= */}
-        <div className="mt-10 sm:mt-14 lg:mt-16 max-w-4xl mx-auto text-center px-4 flex flex-col items-center">
+        <div className="mt-6 sm:mt-14 lg:mt-16 max-w-4xl mx-auto text-center px-4 flex flex-col items-center">
           
           {/* Main Giant Headline */}
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.3] tracking-tight font-arabic">

@@ -211,7 +211,7 @@ export const AIConciergeWidget: React.FC = () => {
   return (
     <>
       {/* Floating Action Button */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3 select-none" dir="rtl">
+      <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-3 select-none" dir="rtl">
         <AnimatePresence>
           {showNotification && !isOpen && (
             <motion.div
@@ -261,7 +261,7 @@ export const AIConciergeWidget: React.FC = () => {
             setIsOpen(!isOpen);
             setShowNotification(false);
           }}
-          className="relative bg-gradient-to-tr from-[#1C1917] to-[#2E2A24] text-[#C5A880] hover:text-[#E4CCAA] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl border border-[#C5A880]/40 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C5A880]/50"
+          className="relative bg-gradient-to-tr from-[#1C1917] to-[#2E2A24] text-[#C5A880] hover:text-[#E4CCAA] w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-2xl border border-[#C5A880]/40 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C5A880]/50"
         >
           {/* Pulsing Outer Glow */}
           <span className="absolute inset-0 rounded-full bg-[#C5A880]/10 animate-ping opacity-70" />
