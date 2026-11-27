@@ -225,6 +225,11 @@ ${ctx}`;
     }
     u.addresses = u.addresses || [];
     const sortA = () => u.addresses.slice().sort((a, b) => b.is_default - a.is_default || b.id - a.id).map((a) => ({ ...a, user_id: u.id }));
+    if (p === "/api/account/export" && m === "GET") {
+      if (await limited(req, "exp", 5, 36e5)) return fail(429, "RATE_LIMITED", "Too many exports. Please try again later.");
+      const orders = (await shop(env).listOrders(u.id)).map(formatOrder);
+      return new Response(JSON.stringify({ exportedAt: new Date().toISOString(), user: pub(u), addresses: sortA(), orders }, null, 2), { headers: { ...H, "content-disposition": 'attachment; filename="fakhama-my-data.json"' } });
+    }
     if (p === "/api/account/addresses" && m === "GET") return ok({ addresses: sortA() });
     if (p === "/api/account/addresses" && m === "POST") {
       const b = await readJson(req);
