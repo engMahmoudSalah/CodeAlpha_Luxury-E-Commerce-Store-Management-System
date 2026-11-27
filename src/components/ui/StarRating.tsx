@@ -26,7 +26,7 @@ export const StarRating: React.FC<{
 
   return (
     <div className="inline-flex items-center gap-1.5">
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5" {...(interactive ? {} : { role: 'img', 'aria-label': `تقييم ${(rating ?? 0).toFixed(1)} من ${max}` })}>
         {Array.from({ length: max }).map((_, i) => {
           const filled = i < Math.floor(rating);
           const half = !filled && i < rating;
@@ -35,6 +35,7 @@ export const StarRating: React.FC<{
               type="button"
               key={`star-${i}`}
               disabled={!interactive}
+              {...(interactive ? { 'aria-label': `قيّم ${i + 1} من ${max}` } : { 'aria-hidden': true, tabIndex: -1 })}
               onClick={() => interactive && onRatingChange?.(i + 1)}
               className={`${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'} p-0.5`}
             >
