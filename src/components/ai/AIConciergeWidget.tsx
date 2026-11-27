@@ -255,6 +255,8 @@ export const AIConciergeWidget: React.FC = () => {
 
         <motion.button
           id="fakhama-ai-trigger"
+          aria-label="المساعد الذكي"
+          aria-expanded={isOpen}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => {
